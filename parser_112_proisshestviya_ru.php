@@ -188,7 +188,7 @@ function addPostWP($post_title='', $post_content='', $post_status='publish', $po
 	
 	
 	return $result;
-}
+} 
 //end
 
 //Add Attachment to Wordpress
