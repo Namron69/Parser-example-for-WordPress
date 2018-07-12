@@ -3,41 +3,41 @@ ignore_user_abort(true);
 set_time_limit(86400);
 error_reporting(0); 
 
-//Загружаю библиотеки WordPress  
+// WordPress   libs
 require_once($_SERVER["DOCUMENT_ROOT"].'/wp-load.php' );
 require_once($_SERVER["DOCUMENT_ROOT"].'/wp-admin/includes/image.php');
 //end
 
-//Конфиг
+//Config
 define('rss_feed', 'https://112.ua/rss/avarii-chp/index.rss');
-define('max_news', 80); //Парсить максимум последних новостей
-define('post_autor', 1); //Юзер
-define('post_category', 4);// Криминал 
-define('post_status', 'publish'); //Статус добавленного поста
+define('max_news', 80); //Max articles
+define('post_autor', 1); //User
+define('post_category', 4);// Cat 
+define('post_status', 'publish'); //Post status
 $resource_url =  parse_url(rss_feed);
 $resource_url = ''.$resource_url[scheme].'://'.$resource_url[host].'/';
 define('resource_url', $resource_url);
-//end
+//End
 
 
-//Переопредиляем месяц соответственно
+//Manth replace
 $month_arr = array('January'=>('янв'), 'February'=>('фев'), 'March'=>('мар'), 'April'=>('апр'), 'May'=>('май'), 'June'=>('июн'), 'July'=>('июл'), 'August'=>('авг'), 'September'=>('сен'), 'October'=>('Окт'), 'November'=>('ноя'), 'December'=>('дек'));
  
-//Парсю RSS
+// RSS
 $xml = parserXML(rss_feed);
 //end
  
 
-//Добавляю информацию на сайт
+//Add articles
 $parsed_items = 0; 
 foreach($xml as $item)
 {	
 	if(max_news == $parsed_items)
-	{   //Стопаю, если достиг максимума
+	{   //Stop
 		break;
 	}
 	
-	//Переменные с данными парсинга XML
+	//XML item data
 	$title = $item[0][value];
 	$link = $item[1][value];
 	$category = $item[5][value];
@@ -45,16 +45,16 @@ foreach($xml as $item)
 	$date = explode(' ', $date);
 	$img_prev = $item[7][attributes][url];
 	
-	//Если новость не сегодняшняя, не парсю ее, иду далее...
+	//If not to day
 	if(date('Ymd', strtotime($date[1].'-'.array_search(''.str_replace('.','',$date[2]).'', $month_arr).'-'.$date[3])) != date('Ymd'))
 	{
 		continue;
 	}
 	
-	//Парсю страницу полной новости донора
+	//Full article
 	$full_info_arr = parserHTML($link);
 	
-	//Подставляю картинку. Если нет с новости, тогда превью ставлю
+	//Image
 	$image_url = '';
 	if(!empty($full_info_arr["full_news_img"]))
 	{	$image_url = $full_info_arr["full_news_img"];
@@ -65,10 +65,10 @@ foreach($xml as $item)
 	$image_url = explode('?',$image_url);
 	$image_url = $image_url[0];
 	
-	//Добавляю пост в WP
+	//Add post to Wordpress
 	$result = addPostWP($title, $full_info_arr['full_news_text'],post_status,post_author,post_category, $image_url, $full_info_arr[tags]);
 	
-	//Вывожу на экран
+	//Show
 	echo $parsed_items.' - post_id: '.$result[post_id].', attachment_id: '.$result[attachment_id].'<br/>';
 	
 	$parsed_items++;
@@ -76,16 +76,16 @@ foreach($xml as $item)
 //end
 
 
-//Парсю полную новость
+//Full article
 function parserHTML($url)
-{	//Достаю страницу полной статьи
+{	//Get full article page
 	$data = file_get_contents($url);
 	
-	//Готовлю контент полной новости
+	//Preparing the content of the full news
 	preg_match_all('/<article class="article-content page-cont">(.*?)<\/article>/si', $data, $full_news_text);
 	$full_news_text = explode('<div class="article-content_text">', $full_news_text[0][0]);
 	
-	//Достаю теги
+	//Get tags
 	preg_match_all('/<div class="article-tags">(.*?)<\/div>/si', $full_news_text[1], $tags);
 	$tags = preg_replace ("!<a.*?href=\"?'?([^ \"'>]+)\"?'?.*?>(.*?)</a>!is", "\\2", $tags[1][0]); 
 	$tags = explode('#', $tags);
@@ -94,7 +94,7 @@ function parserHTML($url)
 	preg_match_all('/<p>(.*?)<\/p>/si', $full_news_text[1], $content);
 	$full_news_text =''; $full_news_img ='';
 	foreach($content[0] as $item)
-	{	//Вырежу ссылки
+	{	//Links cat
 		$item = preg_replace ("!<a.*?href=\"?([^ \"'>]+)\"?'?.*?>(.*?)</a>!is", "\\2", $item); 
 		$item = preg_replace ("!<small>(.*?)</small>!is", "\\2", $item); 
 		//Img
@@ -109,20 +109,20 @@ function parserHTML($url)
 	}
 	//
 	
-	//Прикрепляю видео
+	//Attach a video
 	$full_news_text.=$full_news_video[0][0];
 	
-	//Добавляю ссылку на источник
-	$full_news_text .= '<noindex><p>Источник: <a target="_blank" rel="nofollow noopener" href="'.resource_url.'" title="Источник">'.resource_url.'</a></p></noindex>';
+	//Add a link to the source
+	$full_news_text .= '<noindex><p>Resource: <a target="_blank" rel="nofollow noopener" href="'.resource_url.'" title="Resource">'.resource_url.'</a></p></noindex>';
 	
-	//Пакую в массив Полную статью и Картинку полной статьи
+	//Packing into  array Full article and Picture of the full article
 	$result = array('full_news_text'=>$full_news_text, 'full_news_img'=>$full_news_img, 'tags'=>$tags);
 
 	return $result;
 }
 //end  
   
- //Парсю RSS unn.com.ua
+ //RSS parser
 function parserXML($url){
 	$data = implode('',file($url)); 
 	$parser = xml_parser_create(); 
@@ -149,13 +149,13 @@ function parserXML($url){
 }
 //end
 
-//Добавляю запись WP
+//Add post to WP
 function addPostWP($post_title='', $post_content='', $post_status='publish', $post_author=1, $post_category = 1, $image_url='', $tags ='')
 {	 // Post filtering
     remove_filter('content_save_pre', 'wp_filter_post_kses');
     remove_filter('excerpt_save_pre', 'wp_filter_post_kses');
     remove_filter('content_filtered_save_pre', 'wp_filter_post_kses');
-	//Создаю массив с данными для записи
+	
 	$post_data = array(
 		'post_title'    => wp_strip_all_tags($post_title),
 		'post_content'  => $post_content,
@@ -164,7 +164,7 @@ function addPostWP($post_title='', $post_content='', $post_status='publish', $po
 		'post_category' => array($post_category)
 	);
 
-	// Вставляем запись в базу данных и возвращаю ид нового поста
+	
 	$post_id = get_page_by_title($post_title, OBJECT, 'post');
 	
 	if($post_id->ID<1)
@@ -172,12 +172,12 @@ function addPostWP($post_title='', $post_content='', $post_status='publish', $po
 		$post_id = wp_insert_post( $post_data );
 	
 	
-		//Если есть картинка, креплю ее
+		//Add img
 		if((!empty($image_url)) && ($post_id > 0))
 		{
 			$attachment_id = Generate_Featured_Image( $image_url, $post_id  );
 			
-				//Добавляю теги;
+				//Add tags
 				$tags_id = wp_set_post_tags( $post_id, $tags, true);
 		}
 		$result = array('post_id'=>$post_id,  'attachment_id'=>$attachment_id, 'tags_id'=>$tags_id);
@@ -191,7 +191,7 @@ function addPostWP($post_title='', $post_content='', $post_status='publish', $po
 }
 //end
 
-//Добавляю атачмент Wordpress
+//Add Attachment to Wordpress
 function Generate_Featured_Image($image_url, $post_id)
 {
     $upload_dir = wp_upload_dir();
