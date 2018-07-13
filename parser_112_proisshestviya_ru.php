@@ -164,9 +164,8 @@ function addPostWP($post_title='', $post_content='', $post_status='publish', $po
 		'post_category' => array($post_category)
 	);
 
-	
+	//Check this article in DB
 	$post_id = get_page_by_title($post_title, OBJECT, 'post');
-	
 	if($post_id->ID<1)
 	{
 		$post_id = wp_insert_post( $post_data );
