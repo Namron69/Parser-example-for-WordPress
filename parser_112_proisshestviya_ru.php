@@ -105,7 +105,7 @@ function parserHTML($url)
 	$img ='';
 	preg_match_all('/<meta itemprop="url" content="(.*?)">/si', $full_news_text[0][0], $img); 
 	
-	//Trash cuting
+	//Trash cutting
 	$full_news_text = preg_replace ('!<div class="article-attachment right r mob-hide">(.*?)</div>!is', "\\2", $full_news_text[0][0]); 
 	$full_news_text = preg_replace ('!<script>(.*?)</script>!is', "\\2", $full_news_text);
 	$full_news_text = preg_replace ('!<h2 class="section-title">(.*?)</h2>!is', "\\2", $full_news_text); 	
